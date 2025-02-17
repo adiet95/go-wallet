@@ -1,0 +1,41 @@
+version: '3'
+services:
+  costumer-order-services:
+    container_name: costumer-order-services
+    image: costumer_order_services:1.1.0
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASS}
+      - POSTGRES_DB=${DB_NAME}
+      - DATABASE_HOST=${DB_HOST}
+      - DATABASE_PORT=${DB_PORT}
+      - JWT_KEYS=${JWT_KEYS}
+    tty: true
+    restart: on-failure
+    volumes:
+      - .:/app
+    depends_on:
+      - mysqldb
+    ports:
+      - "8081:8080"
+  mysqldb:
+    image: mysql:8.1
+    container_name: mysql
+    environment:
+      - MYSQL_USER=${DB_USER}
+      - MYSQL_PASSWORD=${DB_PASS}
+      - MYSQL_DATABASE=${DB_NAME}
+      - DATABASE_HOST=${DB_HOST}
+    ports:
+      - '3310:3309'
+    volumes:
+      - mysql_volume:/var/lib/mysql
+    networks:
+      - mysql_network
+volumes:
+  mysql_volume: {}
+networks:
+  mysql_network: {}
