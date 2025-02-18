@@ -34,6 +34,7 @@ func (re *auth_repo) FindByPhone(phoneNumber string) (resp *models.UserResponse,
 		LastName:    data.LastName.String,
 		Address:     data.Address.String,
 		PhoneNumber: data.PhoneNumber.String,
+		Pin:         data.Pin.String,
 		Role:        data.Role,
 		CreatedDate: data.CreatedDate,
 	}
@@ -42,17 +43,12 @@ func (re *auth_repo) FindByPhone(phoneNumber string) (resp *models.UserResponse,
 }
 
 func (re *auth_repo) RegisterPhone(data *entity.User) (resp *models.UserResponse, err error) {
-	var datas *entity.Users
-
-	res := re.db.Model(&datas).Where("phone_number = ?", data.PhoneNumber).First(&data)
-	if res.Error != nil {
-		return nil, errors.New("failed to find data")
-	}
+	res := re.db.Where("phone_number = ?", data.PhoneNumber.String).First(&data)
 	if res.RowsAffected > 0 {
 		return nil, errors.New("Phone number already registered")
 	}
 
-	r := res.Create(data)
+	r := re.db.Create(data)
 	if r.Error != nil {
 		return nil, errors.New("failed to save data")
 	}

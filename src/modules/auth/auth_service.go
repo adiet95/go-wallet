@@ -11,7 +11,8 @@ type auth_service struct {
 	repo interfaces.AuthRepo
 }
 type token_response struct {
-	Tokens string `json:"token"`
+	Tokens       string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
 }
 
 func NewService(reps interfaces.AuthRepo) *auth_service {
@@ -24,23 +25,22 @@ func (u auth_service) Login(body models.LoginRequest) *libs.Response {
 		return libs.New(err.Error(), 400, true)
 	}
 	if !libs.CheckPass(user.Pin, body.Pin) {
-		return libs.New("wrong password", 400, true)
+		return libs.New("Phone Number and PIN doesn't match!", 400, true)
 	}
 	token := libs.NewToken(user.UserId, user.Role)
 	theToken, err := token.Create()
 	if err != nil {
 		return libs.New(err.Error(), 400, true)
 	}
-
-	return libs.New(token_response{Tokens: theToken}, 200, false)
+	refreshToken := libs.NewRefreshToken(user.UserId, user.Role)
+	refToken, err := refreshToken.Create()
+	if err != nil {
+		return libs.New(err.Error(), 400, true)
+	}
+	return libs.New(token_response{Tokens: theToken, RefreshToken: refToken}, 200, false)
 }
 
 func (u auth_service) Register(body *models.RegisterRequest) *libs.Response {
-	checkRegist := libs.Validation(body.PhoneNumber, body.Pin)
-	if checkRegist != nil {
-		return libs.New(checkRegist.Error(), 400, true)
-	}
-
 	hassPass, err := libs.HashPassword(body.Pin)
 	if err != nil {
 		return libs.New(err.Error(), 400, true)

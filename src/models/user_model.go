@@ -1,29 +1,29 @@
 package models
 
 type RegisterRequest struct {
-	FirstName   string `json:"first_name,omitempty" validate:"required;alpha"`
+	FirstName   string `json:"first_name,omitempty" validate:"required,alpha"`
 	LastName    string `json:"last_name,omitempty"`
-	Address     string `json:"address,omitempty" validate:"required;alphanum"`
-	PhoneNumber string `json:"phone_number,omitempty" validate:"required;numeric"`
-	Pin         string `json:"pin,omitempty" validate:"required;numeric"`
+	Address     string `json:"address,omitempty" validate:"required"`
+	PhoneNumber string `json:"phone_number,omitempty" validate:"required,numeric"`
+	Pin         string `json:"pin,omitempty" validate:"required,numeric"`
 }
 
 type LoginRequest struct {
-	PhoneNumber string `json:"phone_number,omitempty" validate:"required;numeric"`
-	Pin         string `json:"pin,omitempty" validate:"required;numeric"`
+	PhoneNumber string `json:"phone_number,omitempty" validate:"required,numeric"`
+	Pin         string `json:"pin,omitempty" validate:"required,numeric"`
 }
 
 type UpdateUserRequest struct {
-	FirstName string `json:"first_name,omitempty" validate:"required;alpha"`
+	FirstName string `json:"first_name,omitempty" validate:"required,alpha"`
 	LastName  string `json:"last_name,omitempty"`
-	Address   string `json:"address,omitempty" validate:"required;alphanum"`
+	Address   string `json:"address,omitempty" validate:"required"`
 }
 
 type UpdateUserResponse struct {
-	FirstName   string `json:"first_name,omitempty" validate:"required;alpha"`
+	FirstName   string `json:"first_name,omitempty" validate:"required,alpha"`
 	LastName    string `json:"last_name,omitempty"`
-	Address     string `json:"address,omitempty" validate:"required;alphanum"`
-	PhoneNumber string `json:"phone_number,omitempty" validate:"required;numeric"`
+	Address     string `json:"address,omitempty" validate:"required"`
+	PhoneNumber string `json:"phone_number,omitempty" validate:"required,numeric"`
 	UpdatedDate string `json:"updated_date,omitempty"`
 }
 

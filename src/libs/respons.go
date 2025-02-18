@@ -7,11 +7,11 @@ import (
 )
 
 type Response struct {
-	Code        int         `json:"-"`
-	Status      string      `json:"status"`
-	IsError     bool        `json:"is_error"`
-	Data        interface{} `json:"data,omitempty"`
-	Description interface{} `json:"description,omitempty"`
+	Code    int         `json:"-"`
+	Status  string      `json:"status"`
+	IsError bool        `json:"is_error"`
+	Result  interface{} `json:"result,omitempty"`
+	Message interface{} `json:"message,omitempty"`
 }
 
 func (res *Response) Send(c echo.Context) error {
@@ -30,17 +30,17 @@ func (res *Response) Send(c echo.Context) error {
 func New(data interface{}, code int, isError bool) *Response {
 	if isError {
 		return &Response{
-			Code:        code,
-			Status:      getStatus(code),
-			IsError:     isError,
-			Description: data,
+			Code:    code,
+			Status:  getStatus(code),
+			IsError: isError,
+			Message: data,
 		}
 	}
 	return &Response{
 		Code:    code,
 		Status:  getStatus(code),
 		IsError: isError,
-		Data:    data,
+		Result:  data,
 	}
 }
 
@@ -48,7 +48,7 @@ func getStatus(status int) string {
 	var desc string
 	switch status {
 	case 200:
-		desc = "OK"
+		desc = "SUCCESS"
 	case 201:
 		desc = "Created"
 	case 202:

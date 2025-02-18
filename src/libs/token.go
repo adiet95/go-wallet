@@ -25,6 +25,16 @@ func NewToken(userId, role string) *Claims {
 	}
 }
 
+func NewRefreshToken(userId, role string) *Claims {
+	return &Claims{
+		UserId: userId,
+		Role:   role,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: time.Now().Add(2 * time.Hour).Unix(),
+		},
+	}
+}
+
 func (c *Claims) Create() (string, error) {
 	tokens := jwt.NewWithClaims(jwt.SigningMethodHS256, c)
 	return tokens.SignedString(mySecrets)

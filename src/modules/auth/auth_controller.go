@@ -33,7 +33,7 @@ func (u user_ctrl) SignIn(c echo.Context) error {
 
 	err = u.Validate.Struct(data)
 	if err != nil {
-		return libs.New(err.Error(), 401, true).Send(c)
+		return libs.New(err.Error(), 400, true).Send(c)
 	}
 
 	return u.repo.Login(data).Send(c)
@@ -49,7 +49,7 @@ func (u user_ctrl) Register(c echo.Context) error {
 
 	err = u.Validate.Struct(data)
 	if err != nil {
-		return libs.New(err.Error(), 401, true).Send(c)
+		return libs.New(err.Error(), 400, true).Send(c)
 	}
 
 	return u.repo.Register(data).Send(c)
