@@ -20,7 +20,7 @@ func NewCtrl(reps interfaces.UserService) *user_ctrl {
 }
 
 func (re *user_ctrl) UpdateProfile(c echo.Context) error {
-	claim_user := c.Get("phone_number")
+	claim_user := c.Get("user_id")
 	if claim_user == "" {
 		return libs.New("claim user is not exist", 400, true).Send(c)
 	}
@@ -32,12 +32,6 @@ func (re *user_ctrl) UpdateProfile(c echo.Context) error {
 	}
 
 	return re.svc.UpdateProfile(&data, claim_user.(string)).Send(c)
-}
-
-func (re *user_ctrl) SearchPhone(c echo.Context) error {
-	val := c.QueryParam("phone_number")
-
-	return re.svc.FindPhone(val).Send(c)
 }
 
 func (re *user_ctrl) SearchName(c echo.Context) error {

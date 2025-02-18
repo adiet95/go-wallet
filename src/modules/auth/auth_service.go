@@ -26,7 +26,7 @@ func (u auth_service) Login(body models.LoginRequest) *libs.Response {
 	if !libs.CheckPass(user.Pin, body.Pin) {
 		return libs.New("wrong password", 400, true)
 	}
-	token := libs.NewToken(body.PhoneNumber, user.Role)
+	token := libs.NewToken(user.UserId, user.Role)
 	theToken, err := token.Create()
 	if err != nil {
 		return libs.New(err.Error(), 400, true)

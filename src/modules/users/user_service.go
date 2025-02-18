@@ -16,7 +16,7 @@ func NewService(reps interfaces.UserRepo) *user_service {
 	return &user_service{reps}
 }
 
-func (re *user_service) UpdateProfile(body *models.UpdateUserRequest, phoneNumber string) *libs.Response {
+func (re *user_service) UpdateProfile(body *models.UpdateUserRequest, userId string) *libs.Response {
 	data := entity.User{}
 
 	if body.FirstName != "" {
@@ -29,7 +29,7 @@ func (re *user_service) UpdateProfile(body *models.UpdateUserRequest, phoneNumbe
 		data.Address = libs.ToNullString(body.Address)
 	}
 
-	resp, err := re.user_repo.UpdateUser(&data, phoneNumber)
+	resp, err := re.user_repo.UpdateUser(&data, userId)
 	if err != nil {
 		if strings.ContainsAny(err.Error(), "not found") {
 			return libs.New(err.Error(), 200, false)
@@ -37,14 +37,6 @@ func (re *user_service) UpdateProfile(body *models.UpdateUserRequest, phoneNumbe
 		return libs.New(err.Error(), 400, true)
 	}
 	return libs.New(resp, 202, false)
-}
-
-func (re *user_service) FindPhone(phoneNumber string) *libs.Response {
-	data, err := re.user_repo.FindByPhone(phoneNumber)
-	if err != nil {
-		return libs.New(err.Error(), 400, true)
-	}
-	return libs.New(data, 200, false)
 }
 
 func (re *user_service) SearchName(name string) *libs.Response {

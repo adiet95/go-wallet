@@ -23,7 +23,7 @@ func CheckAuth(next echo.HandlerFunc) echo.HandlerFunc {
 			return libs.New(err.Error(), 401, true).Send(c)
 		}
 
-		c.Set("email", checkToken.Email)
+		c.Set("user_id", checkToken.UserId)
 		if err = next(c); err != nil {
 			c.Error(err)
 		}

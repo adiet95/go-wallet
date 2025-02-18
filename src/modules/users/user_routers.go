@@ -16,8 +16,7 @@ func New(rt *echo.Echo, db *gorm.DB) {
 	route.Use(middleware.CheckAuth)
 	{
 		route.GET("/:id", ctrl.SearchId)
-		route.PUT("/:id", ctrl.UpdateProfile)
-		route.GET("/search/phone", ctrl.SearchPhone, middleware.CheckAuthor)
+		route.PUT("", ctrl.UpdateProfile)
 		route.GET("/search", ctrl.SearchName, middleware.CheckAuthor)
 	}
 }
