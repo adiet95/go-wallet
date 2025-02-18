@@ -10,6 +10,5 @@ type TransactionRepo interface {
 }
 
 type TransactionService interface {
-	GetPendingStatusTransaction(userId string) *libs.Response
 	GetAllStatusTransaction(userId string) *libs.Response
 }

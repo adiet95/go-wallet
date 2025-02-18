@@ -1,4 +1,4 @@
-package order
+package payment
 
 import (
 	"context"
@@ -41,6 +41,14 @@ func (repo *payment_repo) GetRedisPayment(ctx context.Context, key string) (map[
 		return nil, errors.New("failed to found data")
 	}
 	return data.Val(), nil
+}
+
+func (repo *payment_repo) DelRedisPayment(ctx context.Context, key string) error {
+	data := repo.rd.Del(ctx, key)
+	if data.Err() != nil {
+		return errors.New("failed to found data")
+	}
+	return nil
 }
 
 // func (repo *payment_repo) ExecTrxCreate(tx *gorm.DB, data *entity.Payment) *gorm.DB {

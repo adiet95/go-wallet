@@ -18,6 +18,6 @@ func New(rt *echo.Echo, db *gorm.DB, rd *redis.Client) {
 	route := rt.Group("/transaction")
 	route.Use(middleware.CheckAuth)
 	{
-		route.POST("", ctrl.PostPayment)
+		route.POST("", ctrl.GetAllTransaction)
 	}
 }

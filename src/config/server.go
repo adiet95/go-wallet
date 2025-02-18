@@ -1,6 +1,8 @@
 package config
 
 import (
+	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -9,6 +11,10 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/rs/cors"
 
+	"go-wallet/src/database"
+	"go-wallet/src/modules/payment"
+	"go-wallet/src/modules/topup"
+	"go-wallet/src/modules/transfer"
 	"go-wallet/src/routers"
 
 	"github.com/spf13/cobra"
@@ -21,8 +27,19 @@ var ServeCmd = &cobra.Command{
 }
 
 func server(cmd *cobra.Command, args []string) error {
+	db, err := database.New()
+	if err != nil {
+		return errors.New("failed init database")
+	}
+	rd := database.RedisClient()
+
+	go payment.NewWorker(db, rd)
+	go transfer.NewWorker(db, rd)
+	go topup.NewWorker(db, rd)
+	fmt.Println("Worker is running")
+
 	e := echo.New()
-	if mainRoute, err := routers.New(e); err == nil {
+	if mainRoute, err := routers.New(e, db, rd); err == nil {
 		c := cors.New(cors.Options{
 			AllowedOrigins:   []string{"*"},
 			AllowedHeaders:   []string{"Content-Type", "Authorization"},
@@ -46,6 +63,7 @@ func server(cmd *cobra.Command, args []string) error {
 			IdleTimeout:  time.Minute,
 			Handler:      handlerCors,
 		}
+		fmt.Println("Server is running on port ", addrs)
 		err = srv.ListenAndServe()
 		if err != nil {
 			log.Fatal(err)

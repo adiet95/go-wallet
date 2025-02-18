@@ -1,4 +1,4 @@
-package order
+package transfer
 
 import (
 	"encoding/json"

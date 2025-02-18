@@ -14,6 +14,7 @@ type Payment struct {
 	BalanceBefore int    `json:"balance_before,omitempty"`
 	BalanceAfter  int    `json:"balance_after,omitempty"`
 	CreatedDate   string `json:"created_date,omitempty"`
+	UpdatedDate   string `json:"updated_date,omitempty"`
 }
 
 type Payments []Payment

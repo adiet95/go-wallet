@@ -1,12 +1,19 @@
-package order
+package topup
 
 import (
 	"context"
+	"encoding/json"
 	"go-wallet/src/interfaces"
 	"go-wallet/src/libs"
 	"go-wallet/src/models"
+	"sync"
+	"time"
 
 	"github.com/google/uuid"
+)
+
+var (
+	mutex sync.RWMutex
 )
 
 type topup_service struct {
@@ -71,4 +78,58 @@ func (re *topup_service) PostTopUp(data *models.TopUpRequest, userId string) *li
 		return libs.New(err.Error(), 400, true)
 	}
 	return libs.New(result, 200, false)
+}
+
+func (re *topup_service) WorkerTopUp() {
+	for {
+		ctx := context.Background()
+		redisKey := "topup:pending:*"
+		var redisData models.TopUp
+		dataRedis, err := re.topup_repo.GetRedisTopUp(ctx, redisKey)
+		if dataRedis != nil && err == nil {
+			dbByte, err := json.Marshal(dataRedis)
+			if err != nil {
+
+			}
+			err = json.Unmarshal(dbByte, &redisData)
+			if err != nil {
+
+			}
+
+		} else {
+			time.Sleep(1 * time.Second)
+			continue
+		}
+		mutex.Lock()
+		// StaticParam = *staticParam
+		userData, _ := re.user_repo.FindById(redisData.UserId)
+
+		trx := re.user_repo.InitiateTransaction()
+
+		trx = re.user_repo.ExecTrxUpdateBalance(trx, userData.UserId, redisData.BalanceAfter)
+
+		if trx.Error != nil {
+			trx.Rollback()
+		} else {
+			timeNow, _ := libs.TimeNow()
+			redisData.Status = "SUCCESS"
+			redisData.BalanceBefore = userData.Balance
+			redisData.BalanceAfter = userData.Balance - redisData.AmountTopUp
+			redisData.CreatedDate = timeNow
+			redisKey = "topup:success:" + redisData.UserId
+			err = re.topup_repo.SetRedisTopUp(ctx, redisKey, &redisData, 0)
+			if err != nil {
+				trx.Rollback()
+			} else {
+				err := re.topup_repo.DelRedisPayment(ctx, "topup:pending:"+redisData.UserId)
+				if err != nil {
+					trx.Rollback()
+				}
+			}
+		}
+		mutex.Unlock()
+
+		// firstRun = false
+		// time.Sleep(1 * time.Second)
+	}
 }

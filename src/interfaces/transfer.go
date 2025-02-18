@@ -10,6 +10,7 @@ import (
 type TransferRepo interface {
 	SetRedisTransfer(ctx context.Context, key string, data *models.Transfer, ttl time.Duration) error
 	GetRedisTransfer(ctx context.Context, key string) (map[string]string, error)
+	DelRedisPayment(ctx context.Context, key string) error
 }
 
 type TransferService interface {

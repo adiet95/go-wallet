@@ -1,4 +1,4 @@
-package order
+package transfer
 
 import (
 	"go-wallet/src/middleware"

@@ -1,4 +1,4 @@
-package order
+package topup
 
 import (
 	"go-wallet/src/middleware"
@@ -15,7 +15,7 @@ func New(rt *echo.Echo, db *gorm.DB, rd *redis.Client) {
 	svc := NewService(repo, userRepo)
 	ctrl := NewCtrl(svc)
 
-	route := rt.Group("/pay")
+	route := rt.Group("/topup")
 	route.Use(middleware.CheckAuth)
 	{
 		route.POST("", ctrl.PostTopUp)

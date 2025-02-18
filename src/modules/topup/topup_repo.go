@@ -1,4 +1,4 @@
-package order
+package topup
 
 import (
 	"context"
@@ -43,7 +43,10 @@ func (repo *topup_repo) GetRedisTopUp(ctx context.Context, key string) (map[stri
 	return data.Val(), nil
 }
 
-// func (repo *topup_repo) ExecTrxCreate(tx *gorm.DB, data *entity.Payment) *gorm.DB {
-// 	trx := tx.Create(data)
-// 	return trx
-// }
+func (repo *topup_repo) DelRedisPayment(ctx context.Context, key string) error {
+	data := repo.rd.Del(ctx, key)
+	if data.Err() != nil {
+		return errors.New("failed to found data")
+	}
+	return nil
+}

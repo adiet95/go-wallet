@@ -36,6 +36,7 @@ type UserResponse struct {
 	Pin         string `json:"pin,omitempty"`
 	Balance     int    `json:"balance,omitempty"`
 	CreatedDate string `json:"created_date,omitempty"`
+	UpdatedDate string `json:"updated_date,omitempty"`
 	Role        string `json:"role,omitempty"`
 }
 

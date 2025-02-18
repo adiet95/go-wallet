@@ -10,6 +10,7 @@ import (
 type TopUpRepo interface {
 	SetRedisTopUp(ctx context.Context, key string, data *models.TopUp, ttl time.Duration) error
 	GetRedisTopUp(ctx context.Context, key string) (map[string]string, error)
+	DelRedisPayment(ctx context.Context, key string) error
 }
 
 type TopUpService interface {

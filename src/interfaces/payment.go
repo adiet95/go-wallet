@@ -10,6 +10,7 @@ import (
 type PaymentRepo interface {
 	SetRedisPayment(ctx context.Context, key string, data *models.Payment, ttl time.Duration) error
 	GetRedisPayment(ctx context.Context, key string) (map[string]string, error)
+	DelRedisPayment(ctx context.Context, key string) error
 }
 
 type PaymentService interface {
