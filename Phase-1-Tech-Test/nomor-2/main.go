@@ -21,7 +21,6 @@ func calculateChange(totalBelanja, uangDibayar int) interface{} {
 			kembalian -= jumlahPecahan * p
 		}
 	}
-
 	return true
 }
 

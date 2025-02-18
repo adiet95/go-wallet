@@ -4,13 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"go-wallet/src/constant"
 	"go-wallet/src/interfaces"
 	"go-wallet/src/libs"
 	"go-wallet/src/models"
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
+	"github.com/gofrs/uuid/v5"
 )
 
 var (
@@ -18,20 +19,20 @@ var (
 )
 
 type topup_service struct {
-	topup_repo interfaces.TopUpRepo
 	user_repo  interfaces.UserRepo
+	redis_repo interfaces.RedisRepo
 }
 
-func NewService(reps interfaces.TopUpRepo, user_repo interfaces.UserRepo) *topup_service {
+func NewService(user_repo interfaces.UserRepo, redis_repo interfaces.RedisRepo) *topup_service {
 	return &topup_service{
-		topup_repo: reps,
 		user_repo:  user_repo,
+		redis_repo: redis_repo,
 	}
 }
 
 func (re *topup_service) GetAllStatusTopUp(userId string) *libs.Response {
 	redisKey := "topup:*:" + userId
-	data, err := re.topup_repo.GetRedisTopUp(context.Background(), redisKey)
+	data, err := re.redis_repo.GetRedis(context.Background(), redisKey)
 	if err != nil {
 		return libs.New(err.Error(), 400, true)
 	}
@@ -41,7 +42,7 @@ func (re *topup_service) GetAllStatusTopUp(userId string) *libs.Response {
 
 func (re *topup_service) GetPendingStatusTopUp(userId string) *libs.Response {
 	redisKey := "topup:pending:" + userId
-	data, err := re.topup_repo.GetRedisTopUp(context.Background(), redisKey)
+	data, err := re.redis_repo.GetRedis(context.Background(), redisKey)
 	if err != nil {
 		return libs.New(err.Error(), 400, true)
 	}
@@ -50,7 +51,6 @@ func (re *topup_service) GetPendingStatusTopUp(userId string) *libs.Response {
 }
 
 func (re *topup_service) PostTopUp(data *models.TopUpRequest, userId string) *libs.Response {
-	result := models.TopUp{}
 	userData, err := re.user_repo.FindById(userId)
 	if err != nil {
 		return libs.New(err.Error(), 400, true)
@@ -61,8 +61,7 @@ func (re *topup_service) PostTopUp(data *models.TopUpRequest, userId string) *li
 		return libs.New(err.Error(), 400, true)
 	}
 
-	uuidID, _ := uuid.NewRandom()
-
+	uuidID, _ := uuid.NewV4()
 	dataEntity := &models.TopUp{
 		TopUpId:       uuidID.String(),
 		UserId:        userId,
@@ -74,11 +73,22 @@ func (re *topup_service) PostTopUp(data *models.TopUpRequest, userId string) *li
 		CreatedDate:   timeNow,
 	}
 
-	redisKey := "topup:pending:" + userId
+	redisKey := constant.DefaultKeyRedis + ":topup:pending:" + dataEntity.TopUpId + ":" + userId
 
-	err = re.topup_repo.SetRedisTopUp(context.Background(), redisKey, dataEntity, 0)
+	ObjectRedis, err := libs.StructToMap(dataEntity)
 	if err != nil {
 		return libs.New(err.Error(), 400, true)
+	}
+	err = re.redis_repo.SetRedis(context.Background(), redisKey, ObjectRedis, 0)
+	if err != nil {
+		return libs.New(err.Error(), 400, true)
+	}
+	result := &models.TopUp{
+		TopUpId:       dataEntity.TopUpId,
+		AmountTopUp:   dataEntity.AmountTopUp,
+		BalanceBefore: dataEntity.BalanceBefore,
+		BalanceAfter:  dataEntity.BalanceAfter,
+		CreatedDate:   timeNow,
 	}
 	return libs.New(result, 200, false)
 }
@@ -86,55 +96,63 @@ func (re *topup_service) PostTopUp(data *models.TopUpRequest, userId string) *li
 func (re *topup_service) WorkerTopUp() {
 	for {
 		ctx := context.Background()
-		redisKey := "topup:pending:*"
-		var redisData models.TopUp
-		dataRedis, err := re.topup_repo.GetRedisTopUp(ctx, redisKey)
-		if dataRedis != nil && err == nil {
-			dbByte, err := json.Marshal(dataRedis)
-			if err != nil {
-
-			}
-			err = json.Unmarshal(dbByte, &redisData)
-			if err != nil {
-
-			}
-
-		} else {
-			time.Sleep(1 * time.Second)
-			continue
-		}
-		fmt.Println(redisData, "<<<REDIS DATA")
-
-		mutex.Lock()
-		// StaticParam = *staticParam
-		userData, _ := re.user_repo.FindById(redisData.UserId)
-
-		trx := re.user_repo.InitiateTransaction()
-
-		trx = re.user_repo.ExecTrxUpdateBalance(trx, userData.UserId, redisData.BalanceAfter)
-
-		if trx.Error != nil {
-			trx.Rollback()
-		} else {
-			timeNow, _ := libs.TimeNow()
-			redisData.Status = "SUCCESS"
-			redisData.BalanceBefore = userData.Balance
-			redisData.BalanceAfter = userData.Balance - redisData.AmountTopUp
-			redisData.CreatedDate = timeNow
-			redisKey = "topup:success:" + redisData.UserId
-			err = re.topup_repo.SetRedisTopUp(ctx, redisKey, &redisData, 0)
-			if err != nil {
-				trx.Rollback()
-			} else {
-				err := re.topup_repo.DelRedisPayment(ctx, "topup:pending:"+redisData.UserId)
+		redisKey := constant.DefaultKeyRedis + ":topup:pending:*:*"
+		foundKey, _ := re.redis_repo.SearchKey(ctx, redisKey)
+		if foundKey != "" {
+			var redisData models.TopUp
+			dataRedis, err := re.redis_repo.GetRedis(ctx, foundKey)
+			if dataRedis != "" && err == nil {
+				err = json.Unmarshal([]byte(dataRedis), &redisData)
 				if err != nil {
-					trx.Rollback()
+					fmt.Println("error unmarshal :", err.Error())
 				}
+			} else {
+				time.Sleep(1 * time.Second)
+				continue
+			}
+
+			uuidID, _ := uuid.FromString(redisData.UserId)
+			isValid := uuidID.IsNil()
+			if !isValid && redisData.UserId != "" {
+				mutex.Lock()
+
+				userData, _ := re.user_repo.FindById(redisData.UserId)
+
+				trx := re.user_repo.InitiateTransaction()
+
+				trx = re.user_repo.ExecTrxUpdateBalance(trx, userData.UserId, redisData.AmountTopUp, "topup")
+
+				if trx.Error != nil {
+					trx.Rollback()
+				} else {
+					redisKeySuccess := constant.DefaultKeyRedis + ":topup:success:" + redisData.TopUpId + ":" + redisData.UserId
+					timeNow, _ := libs.TimeNow()
+					redisData.Status = "SUCCESS"
+					redisData.BalanceBefore = userData.Balance
+					redisData.BalanceAfter = userData.Balance + redisData.AmountTopUp
+					redisData.CreatedDate = timeNow
+
+					ObjectRedis, err := libs.StructToMap(redisData)
+					if err != nil {
+						trx.Rollback()
+					}
+					err = re.redis_repo.SetRedis(ctx, redisKeySuccess, ObjectRedis, 0)
+					if err != nil {
+						trx.Rollback()
+					} else {
+						err := re.redis_repo.DelRedis(ctx, foundKey)
+						if err != nil {
+							trx.Rollback()
+						}
+						err = re.user_repo.CommitTrx(trx)
+						if err != nil {
+							trx.Rollback()
+						}
+					}
+					fmt.Println("<<SUCCESS")
+				}
+				mutex.Unlock()
 			}
 		}
-		mutex.Unlock()
-
-		// firstRun = false
-		// time.Sleep(1 * time.Second)
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 
+	"go-wallet/src/libs"
 	"go-wallet/src/models"
 	"go-wallet/src/models/entity"
 
@@ -69,7 +70,7 @@ func (re *user_repo) FindById(id string) (resp *models.UserResponse, err error) 
 	var data *entity.User
 	uuidID, _ := uuid.FromString(id)
 
-	res := re.db.Model(&data).Where("user_id = ?", uuidID).First(&data)
+	res := re.db.Model(data).Where("user_id = ?", uuidID).Find(&data)
 	if res.Error != nil {
 		return nil, errors.New("failed to find data")
 	}
@@ -78,11 +79,13 @@ func (re *user_repo) FindById(id string) (resp *models.UserResponse, err error) 
 	}
 	resp = &models.UserResponse{
 		UserId:      data.UserId,
+		Balance:     int(data.Balance.Int64),
 		FirstName:   data.FirstName.String,
 		LastName:    data.LastName.String,
 		Address:     data.Address.String,
 		PhoneNumber: data.PhoneNumber.String,
 		CreatedDate: data.CreatedDate,
+		UpdatedDate: data.UpdatedDate,
 	}
 
 	return resp, nil
@@ -93,13 +96,50 @@ func (re *user_repo) InitiateTransaction() *gorm.DB {
 	return trx
 }
 
-func (re *user_repo) ExecTrxUpdateBalance(tx *gorm.DB, userId string, balance int) *gorm.DB {
+func (re *user_repo) ExecTrxUpdateBalance(tx *gorm.DB, userId string, amount int, typeTrx string) *gorm.DB {
+	data := &entity.User{}
+	var finalAmount int64
 	uuidID, _ := uuid.FromString(userId)
-	trx := tx.Where("user_id = ?", uuidID).Update("balance", balance)
+
+	tx.Where("user_id = ?", uuidID).Find(data)
+
+	switch typeTrx {
+	case "topup":
+		finalAmount = data.Balance.Int64 + int64(amount)
+	case "payment":
+		finalAmount = data.Balance.Int64 - int64(amount)
+	case "transfer":
+		finalAmount = data.Balance.Int64 - int64(amount)
+	}
+	data.Balance = libs.ToNullInt64(finalAmount)
+	trx := tx.Where("user_id = ?", uuidID).Updates(data)
 	return trx
 }
 
-func (re *user_repo) CommitTrx(tx *gorm.DB, query string, args ...interface{}) error {
+func (re *user_repo) ExecTrxTransferBalance(userId string, amount int, typeTrx string) error {
+	data := &entity.User{}
+	var finalAmount int64
+	uuidID, _ := uuid.FromString(userId)
+
+	re.db.Where("user_id = ?", uuidID).Find(data)
+
+	switch typeTrx {
+	case "topup":
+		finalAmount = data.Balance.Int64 + int64(amount)
+	case "payment":
+		finalAmount = data.Balance.Int64 - int64(amount)
+	case "transfer":
+		finalAmount = data.Balance.Int64 - int64(amount)
+	}
+	data.Balance = libs.ToNullInt64(finalAmount)
+	err := re.db.Where("user_id = ?", uuidID).Updates(data)
+	if err.Error != nil {
+		return errors.New("Error update balance")
+	}
+	return nil
+}
+
+func (re *user_repo) CommitTrx(tx *gorm.DB) error {
 	trx := tx.Commit().Error
 	return trx
 }

@@ -4,13 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"go-wallet/src/constant"
 	"go-wallet/src/interfaces"
 	"go-wallet/src/libs"
 	"go-wallet/src/models"
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
+	"github.com/gofrs/uuid/v5"
 )
 
 var (
@@ -18,20 +19,20 @@ var (
 )
 
 type transfer_service struct {
-	transfer_repo interfaces.TransferRepo
-	user_repo     interfaces.UserRepo
+	redis_repo interfaces.RedisRepo
+	user_repo  interfaces.UserRepo
 }
 
-func NewService(reps interfaces.TransferRepo, user_repo interfaces.UserRepo) *transfer_service {
+func NewService(reps interfaces.RedisRepo, user_repo interfaces.UserRepo) *transfer_service {
 	return &transfer_service{
-		transfer_repo: reps,
-		user_repo:     user_repo,
+		redis_repo: reps,
+		user_repo:  user_repo,
 	}
 }
 
 func (re *transfer_service) GetAllStatusTransfer(userId string) *libs.Response {
 	redisKey := "transfer:*:" + userId
-	data, err := re.transfer_repo.GetRedisTransfer(context.Background(), redisKey)
+	data, err := re.redis_repo.GetRedis(context.Background(), redisKey)
 	if err != nil {
 		return libs.New(err.Error(), 400, true)
 	}
@@ -41,7 +42,7 @@ func (re *transfer_service) GetAllStatusTransfer(userId string) *libs.Response {
 
 func (re *transfer_service) GetPendingStatusTransfer(userId string) *libs.Response {
 	redisKey := "transfer:pending:" + userId
-	data, err := re.transfer_repo.GetRedisTransfer(context.Background(), redisKey)
+	data, err := re.redis_repo.GetRedis(context.Background(), redisKey)
 	if err != nil {
 		return libs.New(err.Error(), 400, true)
 	}
@@ -50,7 +51,6 @@ func (re *transfer_service) GetPendingStatusTransfer(userId string) *libs.Respon
 }
 
 func (re *transfer_service) PostTransfer(data *models.TransferRequest, userId string) *libs.Response {
-	result := models.Transfer{}
 	userData, err := re.user_repo.FindById(userId)
 	if err != nil {
 		return libs.New(err.Error(), 400, true)
@@ -60,24 +60,40 @@ func (re *transfer_service) PostTransfer(data *models.TransferRequest, userId st
 	if err != nil {
 		return libs.New(err.Error(), 400, true)
 	}
-	uuidID, _ := uuid.NewRandom()
+	uuidID, _ := uuid.NewV4()
+
+	if (userData.Balance - data.Amount) < 0 {
+		return libs.New("Balance is not enough", 400, true)
+	}
 
 	dataEntity := &models.Transfer{
 		TransferId:     uuidID.String(),
 		UserId:         userId,
+		TargetUser:     data.TargetUser,
 		AmountTransfer: data.Amount,
 		BalanceBefore:  userData.Balance,
-		BalanceAfter:   userData.Balance + data.Amount,
+		BalanceAfter:   userData.Balance - data.Amount,
 		Remarks:        data.Remarks,
 		Status:         "PENDING",
 		CreatedDate:    timeNow,
 	}
 
-	redisKey := "transfer:pending:" + userId
-
-	err = re.transfer_repo.SetRedisTransfer(context.Background(), redisKey, dataEntity, 0)
+	redisKey := constant.DefaultKeyRedis + ":transfer:pending:" + dataEntity.TransferId + ":" + userId
+	ObjectRedis, err := libs.StructToMap(dataEntity)
 	if err != nil {
 		return libs.New(err.Error(), 400, true)
+	}
+	err = re.redis_repo.SetRedis(context.Background(), redisKey, ObjectRedis, 0)
+	if err != nil {
+		return libs.New(err.Error(), 400, true)
+	}
+	result := &models.Transfer{
+		TransferId:     dataEntity.TransferId,
+		AmountTransfer: dataEntity.AmountTransfer,
+		Remarks:        data.Remarks,
+		BalanceBefore:  dataEntity.BalanceBefore,
+		BalanceAfter:   dataEntity.BalanceAfter,
+		CreatedDate:    timeNow,
 	}
 	return libs.New(result, 200, false)
 }
@@ -85,55 +101,68 @@ func (re *transfer_service) PostTransfer(data *models.TransferRequest, userId st
 func (re *transfer_service) WorkerTransfer() {
 	for {
 		ctx := context.Background()
-		redisKey := "topup:pending:*"
-		var redisData models.Transfer
-		dataRedis, err := re.transfer_repo.GetRedisTransfer(ctx, redisKey)
-		if dataRedis != nil && err == nil {
-			dbByte, err := json.Marshal(dataRedis)
-			if err != nil {
-
-			}
-			err = json.Unmarshal(dbByte, &redisData)
-			if err != nil {
-
-			}
-
-		} else {
-			time.Sleep(1 * time.Second)
-			continue
-		}
-
-		fmt.Println(redisData, "<<<REDIS DATA")
-		mutex.Lock()
-		// StaticParam = *staticParam
-		userData, _ := re.user_repo.FindById(redisData.UserId)
-
-		trx := re.user_repo.InitiateTransaction()
-
-		trx = re.user_repo.ExecTrxUpdateBalance(trx, userData.UserId, redisData.BalanceAfter)
-
-		if trx.Error != nil {
-			trx.Rollback()
-		} else {
-			timeNow, _ := libs.TimeNow()
-			redisData.Status = "SUCCESS"
-			redisData.BalanceBefore = userData.Balance
-			redisData.BalanceAfter = userData.Balance - redisData.AmountTransfer
-			redisData.CreatedDate = timeNow
-			redisKey = "topup:success:" + redisData.UserId
-			err = re.transfer_repo.SetRedisTransfer(ctx, redisKey, &redisData, 0)
-			if err != nil {
-				trx.Rollback()
-			} else {
-				err := re.transfer_repo.DelRedisPayment(ctx, "topup:pending:"+redisData.UserId)
+		redisKey := constant.DefaultKeyRedis + ":transfer:pending:*:*"
+		foundKey, _ := re.redis_repo.SearchKey(ctx, redisKey)
+		if foundKey != "" {
+			var redisData models.Transfer
+			dataRedis, err := re.redis_repo.GetRedis(ctx, foundKey)
+			if dataRedis != "" && err == nil {
+				err = json.Unmarshal([]byte(dataRedis), &redisData)
 				if err != nil {
-					trx.Rollback()
+					fmt.Println("error unmarshal :", err.Error())
 				}
+			} else {
+				time.Sleep(1 * time.Second)
+				continue
+			}
+
+			uuidID, _ := uuid.FromString(redisData.UserId)
+			isValid := uuidID.IsNil()
+			if !isValid && redisData.UserId != "" {
+				mutex.Lock()
+
+				userData, _ := re.user_repo.FindById(redisData.UserId)
+
+				trx := re.user_repo.InitiateTransaction()
+
+				trx = re.user_repo.ExecTrxUpdateBalance(trx, userData.UserId, redisData.AmountTransfer, "transfer")
+
+				if trx.Error != nil {
+					trx.Rollback()
+				} else {
+					//Add Balance to target user
+					err := re.user_repo.ExecTrxTransferBalance(redisData.TargetUser, redisData.AmountTransfer, "topup")
+					if err != nil {
+						trx.Rollback()
+					}
+
+					redisKeySuccess := constant.DefaultKeyRedis + ":transfer:success:" + redisData.TransferId + ":" + redisData.UserId
+					timeNow, _ := libs.TimeNow()
+					redisData.Status = "SUCCESS"
+					redisData.BalanceBefore = userData.Balance
+					redisData.BalanceAfter = userData.Balance - redisData.AmountTransfer
+					redisData.CreatedDate = timeNow
+
+					ObjectRedis, err := libs.StructToMap(redisData)
+					if err != nil {
+						trx.Rollback()
+					}
+					err = re.redis_repo.SetRedis(ctx, redisKeySuccess, ObjectRedis, 0)
+					if err != nil {
+						trx.Rollback()
+					} else {
+						err := re.redis_repo.DelRedis(ctx, foundKey)
+						if err != nil {
+							trx.Rollback()
+						}
+						err = re.user_repo.CommitTrx(trx)
+						if err != nil {
+							trx.Rollback()
+						}
+					}
+				}
+				mutex.Unlock()
 			}
 		}
-		mutex.Unlock()
-
-		// firstRun = false
-		// time.Sleep(1 * time.Second)
 	}
 }

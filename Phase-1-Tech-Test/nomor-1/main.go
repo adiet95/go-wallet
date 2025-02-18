@@ -5,7 +5,6 @@ import (
 	"strings"
 )
 
-// Fungsi untuk mencocokkan string
 func findMatchingStrings(N int, stringsList []string) interface{} {
 	for i := 0; i < N; i++ {
 		for j := i + 1; j < N; j++ {

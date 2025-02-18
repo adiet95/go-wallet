@@ -4,13 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"go-wallet/src/constant"
 	"go-wallet/src/interfaces"
 	"go-wallet/src/libs"
 	"go-wallet/src/models"
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
+	"github.com/gofrs/uuid/v5"
 )
 
 var (
@@ -19,20 +20,20 @@ var (
 )
 
 type payment_service struct {
-	payment_repo interfaces.PaymentRepo
-	user_repo    interfaces.UserRepo
+	redis_repo interfaces.RedisRepo
+	user_repo  interfaces.UserRepo
 }
 
-func NewService(reps interfaces.PaymentRepo, user_repo interfaces.UserRepo) *payment_service {
+func NewService(reps interfaces.RedisRepo, user_repo interfaces.UserRepo) *payment_service {
 	return &payment_service{
-		payment_repo: reps,
-		user_repo:    user_repo,
+		redis_repo: reps,
+		user_repo:  user_repo,
 	}
 }
 
 func (re *payment_service) GetAllPaymentStatus(userId string) *libs.Response {
 	redisKey := "payment:*:" + userId
-	data, err := re.payment_repo.GetRedisPayment(context.Background(), redisKey)
+	data, err := re.redis_repo.GetRedis(context.Background(), redisKey)
 	if err != nil {
 		return libs.New(err.Error(), 400, true)
 	}
@@ -42,7 +43,7 @@ func (re *payment_service) GetAllPaymentStatus(userId string) *libs.Response {
 
 func (re *payment_service) GetPendingPaymentStatus(userId string) *libs.Response {
 	redisKey := "payment:pending:" + userId
-	data, err := re.payment_repo.GetRedisPayment(context.Background(), redisKey)
+	data, err := re.redis_repo.GetRedis(context.Background(), redisKey)
 	if err != nil {
 		return libs.New(err.Error(), 400, true)
 	}
@@ -51,7 +52,6 @@ func (re *payment_service) GetPendingPaymentStatus(userId string) *libs.Response
 }
 
 func (re *payment_service) PostPayment(data *models.PaymentRequest, userId string) *libs.Response {
-	result := models.Payment{}
 	userData, err := re.user_repo.FindById(userId)
 	if err != nil {
 		return libs.New(err.Error(), 400, true)
@@ -66,7 +66,7 @@ func (re *payment_service) PostPayment(data *models.PaymentRequest, userId strin
 		return libs.New("Balance is not enough", 400, true)
 	}
 
-	uuidID, _ := uuid.NewRandom()
+	uuidID, _ := uuid.NewV4()
 	dataEntity := &models.Payment{
 		PaymentId:     uuidID.String(),
 		UserId:        userId,
@@ -78,11 +78,22 @@ func (re *payment_service) PostPayment(data *models.PaymentRequest, userId strin
 		CreatedDate:   timeNow,
 	}
 
-	redisKey := "payment:pending:" + userId
-
-	err = re.payment_repo.SetRedisPayment(context.Background(), redisKey, dataEntity, 0)
+	redisKey := constant.DefaultKeyRedis + ":payment:pending:" + dataEntity.PaymentId + ":" + userId
+	ObjectRedis, err := libs.StructToMap(dataEntity)
 	if err != nil {
 		return libs.New(err.Error(), 400, true)
+	}
+	err = re.redis_repo.SetRedis(context.Background(), redisKey, ObjectRedis, 0)
+	if err != nil {
+		return libs.New(err.Error(), 400, true)
+	}
+	result := &models.Payment{
+		PaymentId:     dataEntity.PaymentId,
+		AmountPayment: dataEntity.AmountPayment,
+		Remarks:       data.Remarks,
+		BalanceBefore: dataEntity.BalanceBefore,
+		BalanceAfter:  dataEntity.BalanceAfter,
+		CreatedDate:   timeNow,
 	}
 	return libs.New(result, 200, false)
 }
@@ -90,55 +101,63 @@ func (re *payment_service) PostPayment(data *models.PaymentRequest, userId strin
 func (re *payment_service) WorkerPayment() {
 	for {
 		ctx := context.Background()
-		redisKey := "payment:pending:*"
-		var redisData models.Payment
-		dataRedis, err := re.payment_repo.GetRedisPayment(ctx, redisKey)
-		if dataRedis != nil && err == nil {
-			dbByte, err := json.Marshal(dataRedis)
-			if err != nil {
-
-			}
-			err = json.Unmarshal(dbByte, &redisData)
-			if err != nil {
-
-			}
-
-		} else {
-			time.Sleep(1 * time.Second)
-			continue
-		}
-
-		fmt.Println(redisData, "<<<REDIS DATA")
-		mutex.Lock()
-		// StaticParam = *staticParam
-		userData, _ := re.user_repo.FindById(redisData.UserId)
-
-		trx := re.user_repo.InitiateTransaction()
-
-		trx = re.user_repo.ExecTrxUpdateBalance(trx, userData.UserId, redisData.BalanceAfter)
-
-		if trx.Error != nil {
-			trx.Rollback()
-		} else {
-			timeNow, _ := libs.TimeNow()
-			redisData.Status = "SUCCESS"
-			redisData.BalanceBefore = userData.Balance
-			redisData.BalanceAfter = userData.Balance - redisData.AmountPayment
-			redisData.CreatedDate = timeNow
-			redisKey = "payment:success:" + redisData.UserId
-			err = re.payment_repo.SetRedisPayment(ctx, redisKey, &redisData, 0)
-			if err != nil {
-				trx.Rollback()
-			} else {
-				err := re.payment_repo.DelRedisPayment(ctx, "payment:pending:"+redisData.UserId)
+		redisKey := constant.DefaultKeyRedis + ":payment:pending:*:*"
+		foundKey, _ := re.redis_repo.SearchKey(ctx, redisKey)
+		if foundKey != "" {
+			var redisData models.Payment
+			dataRedis, err := re.redis_repo.GetRedis(ctx, foundKey)
+			if dataRedis != "" && err == nil {
+				err = json.Unmarshal([]byte(dataRedis), &redisData)
 				if err != nil {
-					trx.Rollback()
+					fmt.Println("error unmarshal :", err.Error())
 				}
+			} else {
+				time.Sleep(1 * time.Second)
+				continue
+			}
+
+			uuidID, _ := uuid.FromString(redisData.UserId)
+			isValid := uuidID.IsNil()
+			if !isValid && redisData.UserId != "" {
+				mutex.Lock()
+
+				userData, _ := re.user_repo.FindById(redisData.UserId)
+
+				trx := re.user_repo.InitiateTransaction()
+
+				trx = re.user_repo.ExecTrxUpdateBalance(trx, userData.UserId, redisData.AmountPayment, "payment")
+
+				if trx.Error != nil {
+					trx.Rollback()
+				} else {
+					redisKeySuccess := constant.DefaultKeyRedis + ":payment:success:" + redisData.PaymentId + ":" + redisData.UserId
+					timeNow, _ := libs.TimeNow()
+					redisData.Status = "SUCCESS"
+					redisData.BalanceBefore = userData.Balance
+					redisData.BalanceAfter = userData.Balance - redisData.AmountPayment
+					redisData.CreatedDate = timeNow
+
+					ObjectRedis, err := libs.StructToMap(redisData)
+					if err != nil {
+						trx.Rollback()
+					}
+					err = re.redis_repo.SetRedis(ctx, redisKeySuccess, ObjectRedis, 0)
+					if err != nil {
+						trx.Rollback()
+					} else {
+						err := re.redis_repo.DelRedis(ctx, foundKey)
+						if err != nil {
+							trx.Rollback()
+						}
+						err = re.user_repo.CommitTrx(trx)
+						if err != nil {
+							trx.Rollback()
+						}
+					}
+					fmt.Println("<<SUCCESS")
+				}
+				mutex.Unlock()
 			}
 		}
-		mutex.Unlock()
-
-		// firstRun = false
-		// time.Sleep(1 * time.Second)
 	}
 }

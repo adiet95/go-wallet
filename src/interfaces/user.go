@@ -13,8 +13,9 @@ type UserRepo interface {
 	FindByName(name string) (resp models.UsersResponses, err error)
 	FindById(id string) (resp *models.UserResponse, err error)
 	InitiateTransaction() *gorm.DB
-	ExecTrxUpdateBalance(tx *gorm.DB, userId string, balance int) *gorm.DB
-	CommitTrx(tx *gorm.DB, query string, args ...interface{}) error
+	ExecTrxUpdateBalance(tx *gorm.DB, userId string, amount int, typeTrx string) *gorm.DB
+	ExecTrxTransferBalance(userId string, amount int, typeTrx string) error
+	CommitTrx(tx *gorm.DB) error
 }
 
 type UserService interface {

@@ -1,6 +1,7 @@
 package transfer
 
 import (
+	redisrepo "go-wallet/src/modules/redis"
 	"go-wallet/src/modules/users"
 
 	"github.com/redis/go-redis/v9"
@@ -8,7 +9,7 @@ import (
 )
 
 func NewWorker(db *gorm.DB, rd *redis.Client) {
-	repo := NewRepo(db, rd)
+	repo := redisrepo.NewRepo(rd)
 	userRepo := users.NewRepo(db)
 	svc := NewService(repo, userRepo)
 	svc.WorkerTransfer()
