@@ -3,6 +3,7 @@ package payment
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"go-wallet/src/interfaces"
 	"go-wallet/src/libs"
 	"go-wallet/src/models"
@@ -65,8 +66,9 @@ func (re *payment_service) PostPayment(data *models.PaymentRequest, userId strin
 		return libs.New("Balance is not enough", 400, true)
 	}
 
+	uuidID, _ := uuid.NewRandom()
 	dataEntity := &models.Payment{
-		PaymentId:     uuid.New().String(),
+		PaymentId:     uuidID.String(),
 		UserId:        userId,
 		AmountPayment: data.Amount,
 		BalanceBefore: userData.Balance,
@@ -105,6 +107,8 @@ func (re *payment_service) WorkerPayment() {
 			time.Sleep(1 * time.Second)
 			continue
 		}
+
+		fmt.Println(redisData, "<<<REDIS DATA")
 		mutex.Lock()
 		// StaticParam = *staticParam
 		userData, _ := re.user_repo.FindById(redisData.UserId)

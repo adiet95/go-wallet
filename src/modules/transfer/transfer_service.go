@@ -3,6 +3,7 @@ package transfer
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"go-wallet/src/interfaces"
 	"go-wallet/src/libs"
 	"go-wallet/src/models"
@@ -59,9 +60,10 @@ func (re *transfer_service) PostTransfer(data *models.TransferRequest, userId st
 	if err != nil {
 		return libs.New(err.Error(), 400, true)
 	}
+	uuidID, _ := uuid.NewRandom()
 
 	dataEntity := &models.Transfer{
-		TransferId:     uuid.New().String(),
+		TransferId:     uuidID.String(),
 		UserId:         userId,
 		AmountTransfer: data.Amount,
 		BalanceBefore:  userData.Balance,
@@ -100,6 +102,8 @@ func (re *transfer_service) WorkerTransfer() {
 			time.Sleep(1 * time.Second)
 			continue
 		}
+
+		fmt.Println(redisData, "<<<REDIS DATA")
 		mutex.Lock()
 		// StaticParam = *staticParam
 		userData, _ := re.user_repo.FindById(redisData.UserId)

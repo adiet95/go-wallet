@@ -3,6 +3,7 @@ package topup
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"go-wallet/src/interfaces"
 	"go-wallet/src/libs"
 	"go-wallet/src/models"
@@ -60,8 +61,10 @@ func (re *topup_service) PostTopUp(data *models.TopUpRequest, userId string) *li
 		return libs.New(err.Error(), 400, true)
 	}
 
+	uuidID, _ := uuid.NewRandom()
+
 	dataEntity := &models.TopUp{
-		TopUpId:       uuid.New().String(),
+		TopUpId:       uuidID.String(),
 		UserId:        userId,
 		AmountTopUp:   data.Amount,
 		BalanceBefore: userData.Balance,
@@ -100,6 +103,8 @@ func (re *topup_service) WorkerTopUp() {
 			time.Sleep(1 * time.Second)
 			continue
 		}
+		fmt.Println(redisData, "<<<REDIS DATA")
+
 		mutex.Lock()
 		// StaticParam = *staticParam
 		userData, _ := re.user_repo.FindById(redisData.UserId)

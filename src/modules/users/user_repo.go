@@ -7,6 +7,7 @@ import (
 	"go-wallet/src/models"
 	"go-wallet/src/models/entity"
 
+	"github.com/gofrs/uuid/v5"
 	"gorm.io/gorm"
 )
 
@@ -19,7 +20,8 @@ func NewRepo(db *gorm.DB) *user_repo {
 }
 
 func (re *user_repo) UpdateUser(data *entity.User, userId string) (resp *models.UserResponse, err error) {
-	res := re.db.Model(&data).Where("user_id = ?", userId).Updates(&data)
+	uuidID, _ := uuid.FromString(userId)
+	res := re.db.Model(&data).Where("user_id = ?", uuidID).Updates(&data)
 
 	if res.Error != nil {
 		return nil, errors.New("failed to update data")
@@ -65,8 +67,9 @@ func (re *user_repo) FindByName(name string) (resp models.UsersResponses, err er
 
 func (re *user_repo) FindById(id string) (resp *models.UserResponse, err error) {
 	var data *entity.User
+	uuidID, _ := uuid.FromString(id)
 
-	res := re.db.Model(&data).Where("user_id = ?", id).First(&data)
+	res := re.db.Model(&data).Where("user_id = ?", uuidID).First(&data)
 	if res.Error != nil {
 		return nil, errors.New("failed to find data")
 	}
@@ -91,7 +94,8 @@ func (re *user_repo) InitiateTransaction() *gorm.DB {
 }
 
 func (re *user_repo) ExecTrxUpdateBalance(tx *gorm.DB, userId string, balance int) *gorm.DB {
-	trx := tx.Where("LOWER(user_id) = ?", userId).Update("balance", balance)
+	uuidID, _ := uuid.FromString(userId)
+	trx := tx.Where("user_id = ?", uuidID).Update("balance", balance)
 	return trx
 }
 
