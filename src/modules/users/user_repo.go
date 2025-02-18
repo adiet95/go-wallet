@@ -1,6 +1,7 @@
 package users
 
 import (
+	"database/sql"
 	"errors"
 
 	"go-wallet/src/models"
@@ -103,4 +104,19 @@ func (re *user_repo) FindById(id string) (resp *models.UserResponse, err error) 
 	}
 
 	return resp, nil
+}
+
+func (re *user_repo) InitiateTransaction() *gorm.DB {
+	trx := re.db.Begin(&sql.TxOptions{})
+	return trx
+}
+
+func (re *user_repo) ExecTrxUpdateBalance(tx *gorm.DB, userId string, balance int) *gorm.DB {
+	trx := tx.Where("LOWER(user_id) = ?", userId).Update("balance", balance)
+	return trx
+}
+
+func (re *user_repo) CommitTrx(tx *gorm.DB, query string, args ...interface{}) error {
+	trx := tx.Commit().Error
+	return trx
 }

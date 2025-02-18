@@ -26,4 +26,4 @@ RUN go install -v ./...
 RUN go get github.com/githubnemo/CompileDaemon
 RUN go get -v golang.org/x/tools/gopls
 
-CMD ["go", "run", ".", "serve"]
+CMD ["go", "run", "."]

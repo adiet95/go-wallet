@@ -46,12 +46,18 @@ func (u auth_service) Register(body *models.RegisterRequest) *libs.Response {
 		return libs.New(err.Error(), 400, true)
 	}
 
+	timeNow, err := libs.TimeNow()
+	if err != nil {
+		return libs.New(err.Error(), 400, true)
+	}
+
 	data := &entity.User{
 		FirstName:   libs.ToNullString(body.FirstName),
 		LastName:    libs.ToNullString(body.LastName),
 		Address:     libs.ToNullString(body.Address),
 		PhoneNumber: libs.ToNullString(body.PhoneNumber),
 		Pin:         libs.ToNullString(hassPass),
+		CreatedDate: timeNow,
 		Role:        "user",
 	}
 
