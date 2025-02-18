@@ -2,13 +2,14 @@ package libs
 
 import (
 	"encoding/json"
+
 	"github.com/labstack/echo/v4"
 )
 
 type Response struct {
 	Code        int         `json:"-"`
 	Status      string      `json:"status"`
-	IsError     bool        `json:"isError"`
+	IsError     bool        `json:"is_error"`
 	Data        interface{} `json:"data,omitempty"`
 	Description interface{} `json:"description,omitempty"`
 }
