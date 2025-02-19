@@ -60,8 +60,8 @@ go run . seed
 _Purpose to login as Admin's Role_
 ```
 {
-  "email": "admin@gmail.com",
-  "password": "admin12345678"
+  "phone_number": "081388355301",
+  "pin": "123987"
 }
 ```
 
