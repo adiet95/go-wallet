@@ -5,7 +5,7 @@
 2. go run . migrate -u //for database migration
 # or
 go run . migrate -d //for rollback
-3. go run . seed // to seeding data Role admin if u want Email : "admin@gmail.com" Pass : admin12345678
+3. go run . seed // to seeding data Role admin if u want Phone : 081388355301 Pin : 123987
 ```
 
 ## 🛠️ Installation Steps
@@ -13,7 +13,7 @@ go run . migrate -d //for rollback
 1. Clone the repository
 
 ```bash
-https://go-wallet.git
+https://github.com/adiet95/go-wallet.git
 ```
 
 2. Install dependencies
@@ -30,13 +30,18 @@ go mod vendor
 3. Add Env File
 
 ```sh
-  DB_USER="postgres"
-  DB_HOST="localhost"
-  DB_NAME="go-order"
-  DB_PASS="root"
-  JWT_KEYS="Rahasiaaaa"
+  DB_USER=""
+  DB_HOST=""
+  DB_NAME=""
+  DB_PASS=""
+  DB_PORT=""
+
+  REDIS_URL=""
+  REDIS_PASSWORD=""
+  REDIS_DB=""
+
+  JWT_KEYS="e48840cae9bb5eeef8e627d61e165e2e0029991c1bc1ac3829f7e87c0c78e569"
   PORT=":8080"
-  DB_PORT="5432"
 ```
 
 4. Database Migration and Rollback
@@ -77,6 +82,7 @@ go run . serve
 - [Golang](https://go.dev/): Go Programming Language
 - [Echo](https://echo.labstack.com/): for handle http request
 - [Postgres](https://www.postgresql.org/): for DBMS
+- [Redis](https://redis.io/): Transactional Report
 
 
 ## 🚀 About Me
