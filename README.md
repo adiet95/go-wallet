@@ -74,7 +74,7 @@ go run . serve
 ### 🚀 You are all set
 
 ## 🔗 RESTful Documentation Endpoints
-[API Documentation](https://documenter.getpostman.com/view/28477373/2sA3e2hA7c) <- Click Link
+[API Documentation](https://documenter.getpostman.com/view/22320158/2sAYdZtZ9i) <- Click Link
 
 
 ## 💻 Built with
