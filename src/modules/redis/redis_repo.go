@@ -53,6 +53,14 @@ func (repo *redis_repo) SearchKey(ctx context.Context, pattern string) (string, 
 	return "", nil
 }
 
+func (repo *redis_repo) SearchKeyArr(ctx context.Context, pattern string) ([]string, error) {
+	keys, err := repo.rd.Keys(ctx, pattern).Result()
+	if err != nil {
+		return nil, errors.New("Error scanning keys: ")
+	}
+	return keys, nil
+}
+
 func (repo *redis_repo) DelRedis(ctx context.Context, key string) error {
 	data := repo.rd.GetDel(ctx, key)
 	if data.Err() != nil {

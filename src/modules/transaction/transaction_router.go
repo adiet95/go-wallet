@@ -2,6 +2,7 @@ package transaction
 
 import (
 	"go-wallet/src/middleware"
+	redisrepo "go-wallet/src/modules/redis"
 	"go-wallet/src/modules/users"
 
 	"github.com/labstack/echo/v4"
@@ -10,7 +11,7 @@ import (
 )
 
 func New(rt *echo.Echo, db *gorm.DB, rd *redis.Client) {
-	repo := NewRepo(db, rd)
+	repo := redisrepo.NewRepo(rd)
 	userRepo := users.NewRepo(db)
 	svc := NewService(repo, userRepo)
 	ctrl := NewCtrl(svc)
@@ -18,6 +19,6 @@ func New(rt *echo.Echo, db *gorm.DB, rd *redis.Client) {
 	route := rt.Group("/transaction")
 	route.Use(middleware.CheckAuth)
 	{
-		route.POST("", ctrl.GetAllTransaction)
+		route.GET("", ctrl.GetAllTransaction)
 	}
 }

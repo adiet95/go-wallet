@@ -29,6 +29,9 @@ func (re *user_service) UpdateProfile(body *models.UpdateUserRequest, userId str
 		data.Address = libs.ToNullString(body.Address)
 	}
 
+	timeNow, _ := libs.TimeNow()
+	data.UpdatedDate = timeNow
+
 	resp, err := re.user_repo.UpdateUser(&data, userId)
 	if err != nil {
 		if strings.ContainsAny(err.Error(), "not found") {

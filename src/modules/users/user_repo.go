@@ -22,7 +22,7 @@ func NewRepo(db *gorm.DB) *user_repo {
 
 func (re *user_repo) UpdateUser(data *entity.User, userId string) (resp *models.UserResponse, err error) {
 	uuidID, _ := uuid.FromString(userId)
-	res := re.db.Model(&data).Where("user_id = ?", uuidID).Updates(&data)
+	res := re.db.Model(data).Where("user_id = ?", uuidID).Updates(&data)
 
 	if res.Error != nil {
 		return nil, errors.New("failed to update data")
@@ -35,6 +35,7 @@ func (re *user_repo) UpdateUser(data *entity.User, userId string) (resp *models.
 		Address:     data.Address.String,
 		PhoneNumber: data.PhoneNumber.String,
 		CreatedDate: data.CreatedDate,
+		UpdatedDate: data.UpdatedDate,
 	}
 
 	return resp, nil

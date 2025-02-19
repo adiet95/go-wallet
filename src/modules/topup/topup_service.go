@@ -30,26 +30,6 @@ func NewService(user_repo interfaces.UserRepo, redis_repo interfaces.RedisRepo) 
 	}
 }
 
-func (re *topup_service) GetAllStatusTopUp(userId string) *libs.Response {
-	redisKey := "topup:*:" + userId
-	data, err := re.redis_repo.GetRedis(context.Background(), redisKey)
-	if err != nil {
-		return libs.New(err.Error(), 400, true)
-	}
-
-	return libs.New(data, 200, false)
-}
-
-func (re *topup_service) GetPendingStatusTopUp(userId string) *libs.Response {
-	redisKey := "topup:pending:" + userId
-	data, err := re.redis_repo.GetRedis(context.Background(), redisKey)
-	if err != nil {
-		return libs.New(err.Error(), 400, true)
-	}
-
-	return libs.New(data, 200, false)
-}
-
 func (re *topup_service) PostTopUp(data *models.TopUpRequest, userId string) *libs.Response {
 	userData, err := re.user_repo.FindById(userId)
 	if err != nil {

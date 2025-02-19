@@ -31,26 +31,6 @@ func NewService(reps interfaces.RedisRepo, user_repo interfaces.UserRepo) *payme
 	}
 }
 
-func (re *payment_service) GetAllPaymentStatus(userId string) *libs.Response {
-	redisKey := "payment:*:" + userId
-	data, err := re.redis_repo.GetRedis(context.Background(), redisKey)
-	if err != nil {
-		return libs.New(err.Error(), 400, true)
-	}
-
-	return libs.New(data, 200, false)
-}
-
-func (re *payment_service) GetPendingPaymentStatus(userId string) *libs.Response {
-	redisKey := "payment:pending:" + userId
-	data, err := re.redis_repo.GetRedis(context.Background(), redisKey)
-	if err != nil {
-		return libs.New(err.Error(), 400, true)
-	}
-
-	return libs.New(data, 200, false)
-}
-
 func (re *payment_service) PostPayment(data *models.PaymentRequest, userId string) *libs.Response {
 	userData, err := re.user_repo.FindById(userId)
 	if err != nil {

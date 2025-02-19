@@ -12,11 +12,11 @@ func New(rt *echo.Echo, db *gorm.DB) {
 	svc := NewService(repo)
 	ctrl := NewCtrl(svc)
 
-	route := rt.Group("/user")
+	route := rt.Group("")
 	route.Use(middleware.CheckAuth)
 	{
 		route.GET("/:id", ctrl.SearchId)
-		route.PUT("", ctrl.UpdateProfile)
+		route.PUT("/profile", ctrl.UpdateProfile)
 		route.GET("/search", ctrl.SearchName, middleware.CheckAuthor)
 	}
 }

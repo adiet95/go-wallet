@@ -30,26 +30,6 @@ func NewService(reps interfaces.RedisRepo, user_repo interfaces.UserRepo) *trans
 	}
 }
 
-func (re *transfer_service) GetAllStatusTransfer(userId string) *libs.Response {
-	redisKey := "transfer:*:" + userId
-	data, err := re.redis_repo.GetRedis(context.Background(), redisKey)
-	if err != nil {
-		return libs.New(err.Error(), 400, true)
-	}
-
-	return libs.New(data, 200, false)
-}
-
-func (re *transfer_service) GetPendingStatusTransfer(userId string) *libs.Response {
-	redisKey := "transfer:pending:" + userId
-	data, err := re.redis_repo.GetRedis(context.Background(), redisKey)
-	if err != nil {
-		return libs.New(err.Error(), 400, true)
-	}
-
-	return libs.New(data, 200, false)
-}
-
 func (re *transfer_service) PostTransfer(data *models.TransferRequest, userId string) *libs.Response {
 	userData, err := re.user_repo.FindById(userId)
 	if err != nil {
