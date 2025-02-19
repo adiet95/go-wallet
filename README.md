@@ -9,8 +9,6 @@ API Documentation
 https://documenter.getpostman.com/view/22320158/2sAYdZtZ9i
 
 ```
-https://i.ibb.co.com/6RT7qwT2/tech-test-drawio-1.png
-
 ## Several command you must know in this app :
 ```bash
 1. go run . serve //to run the app / server
