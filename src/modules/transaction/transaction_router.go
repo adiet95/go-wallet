@@ -20,5 +20,6 @@ func New(rt *echo.Echo, db *gorm.DB, rd *redis.Client) {
 	route.Use(middleware.CheckAuth)
 	{
 		route.GET("", ctrl.GetAllTransaction)
+		route.GET("/admin", ctrl.AdminGetAllTransaction, middleware.CheckAuthor)
 	}
 }

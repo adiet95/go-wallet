@@ -22,3 +22,7 @@ func (re *transaction_ctrl) GetAllTransaction(c echo.Context) error {
 	}
 	return re.svc.GetAllStatusTransaction(claim_user.(string)).Send(c)
 }
+
+func (re *transaction_ctrl) AdminGetAllTransaction(c echo.Context) error {
+	return re.svc.AdminGetAllStatusTransaction().Send(c)
+}

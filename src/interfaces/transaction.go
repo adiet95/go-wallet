@@ -6,4 +6,5 @@ import (
 
 type TransactionService interface {
 	GetAllStatusTransaction(userId string) *libs.Response
+	AdminGetAllStatusTransaction() *libs.Response
 }
