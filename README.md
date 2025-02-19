@@ -1,3 +1,6 @@
+## 🛠️ System Design
+<p align="center"><img src="https://res.cloudinary.com/dw5qffbop/image/upload/v1665874871/erd_c15gne.png" alt="erd.jpg" /></p>
+
 ## 🔗 RESTful Documentation Endpoints
 [API Documentation](https://documenter.getpostman.com/view/22320158/2sAYdZtZ9i) <- Click Link
 API Documentation
@@ -6,6 +9,7 @@ API Documentation
 https://documenter.getpostman.com/view/22320158/2sAYdZtZ9i
 
 ```
+https://i.ibb.co.com/6RT7qwT2/tech-test-drawio-1.png
 
 ## Several command you must know in this app :
 ```bash
